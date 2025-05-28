@@ -1,4 +1,4 @@
-import { Box, Container, Text } from "@chakra-ui/react"
+import { Box, Container, Text, Flex } from "@chakra-ui/react"
 import { createFileRoute } from "@tanstack/react-router"
 
 import useAuth from "@/hooks/useAuth"
@@ -11,15 +11,23 @@ function Dashboard() {
   const { user: currentUser } = useAuth()
 
   return (
-    <>
-      <Container maxW="full">
-        <Box pt={12} m={4}>
-          <Text fontSize="2xl" truncate maxW="sm">
-            Hi, {currentUser?.full_name || currentUser?.email} 👋🏼
-          </Text>
-          <Text>Welcome back, nice to see you again!</Text>
-        </Box>
-      </Container>
-    </>
+    <Container maxW="full">
+      <Flex 
+        align="center" 
+        h="120px" 
+        px={4}
+        borderBottom="1px solid"
+        borderColor="gray.200"
+      >
+        <Text fontSize="2xl" fontWeight="medium">
+          Welcome, {currentUser?.full_name || currentUser?.email?.split('@')[0]} 👋
+        </Text>
+      </Flex>
+      <Box p={4}>
+        <Text color="gray.600">Welcome back, nice to see you again!</Text>
+      </Box>
+    </Container>
   )
 }
+
+export default Dashboard

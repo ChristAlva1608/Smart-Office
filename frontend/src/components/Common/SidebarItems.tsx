@@ -1,7 +1,7 @@
 import { Box, Flex, Icon, Text } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link as RouterLink } from "@tanstack/react-router"
-import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
+import { FiBriefcase, FiHome, FiSettings, FiUsers, FiActivity } from "react-icons/fi"
 import type { IconType } from "react-icons/lib"
 
 import type { UserPublic } from "@/client"
@@ -9,6 +9,7 @@ import type { UserPublic } from "@/client"
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
   { icon: FiBriefcase, title: "Items", path: "/items" },
+  { icon: FiActivity, title: "IoT", path: "/iot" },
   { icon: FiSettings, title: "User Settings", path: "/settings" },
 ]
 
@@ -35,22 +36,24 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
       <Flex
         gap={4}
         px={4}
-        py={2}
+        py={3}
         _hover={{
           background: "gray.subtle",
+          borderRadius: "md",
         }}
         alignItems="center"
         fontSize="sm"
+        transition="all 0.2s"
       >
-        <Icon as={icon} alignSelf="center" />
-        <Text ml={2}>{title}</Text>
+        <Icon as={icon} boxSize={5} />
+        <Text>{title}</Text>
       </Flex>
     </RouterLink>
   ))
 
   return (
     <>
-      <Text fontSize="xs" px={4} py={2} fontWeight="bold">
+      <Text fontSize="xs" px={4} py={2} fontWeight="bold" color="gray.500">
         Menu
       </Text>
       <Box>{listItems}</Box>

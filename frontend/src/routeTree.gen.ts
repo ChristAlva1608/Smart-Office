@@ -19,7 +19,10 @@ import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 import { Route as LayoutItemsImport } from './routes/_layout/items'
+import { Route as LayoutIotImport } from './routes/_layout/iot'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
+import { Route as LayoutIotTemperatureImport } from './routes/_layout/iot/temperature'
+import { Route as LayoutIotHumidityImport } from './routes/_layout/iot/humidity'
 
 // Create/Update Routes
 
@@ -63,9 +66,24 @@ const LayoutItemsRoute = LayoutItemsImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutIotRoute = LayoutIotImport.update({
+  path: '/iot',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutAdminRoute = LayoutAdminImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutIotTemperatureRoute = LayoutIotTemperatureImport.update({
+  path: '/temperature',
+  getParentRoute: () => LayoutIotRoute,
+} as any)
+
+const LayoutIotHumidityRoute = LayoutIotHumidityImport.update({
+  path: '/humidity',
+  getParentRoute: () => LayoutIotRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -96,6 +114,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/iot': {
+      preLoaderRoute: typeof LayoutIotImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/items': {
       preLoaderRoute: typeof LayoutItemsImport
       parentRoute: typeof LayoutImport
@@ -108,6 +130,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/iot/humidity': {
+      preLoaderRoute: typeof LayoutIotHumidityImport
+      parentRoute: typeof LayoutIotImport
+    }
+    '/_layout/iot/temperature': {
+      preLoaderRoute: typeof LayoutIotTemperatureImport
+      parentRoute: typeof LayoutIotImport
+    }
   }
 }
 
@@ -116,6 +146,10 @@ declare module '@tanstack/react-router' {
 export const routeTree = rootRoute.addChildren([
   LayoutRoute.addChildren([
     LayoutAdminRoute,
+    LayoutIotRoute.addChildren([
+      LayoutIotHumidityRoute,
+      LayoutIotTemperatureRoute,
+    ]),
     LayoutItemsRoute,
     LayoutSettingsRoute,
     LayoutIndexRoute,

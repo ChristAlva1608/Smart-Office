@@ -1,9 +1,11 @@
-import { Box, Flex, IconButton, Text } from "@chakra-ui/react"
+import { Box, Flex, IconButton, Image, Text } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { FaBars } from "react-icons/fa"
 import { FiLogOut } from "react-icons/fi"
 
+import Logo from "/assets/images/smart-home.png"
 import type { UserPublic } from "@/client"
 import useAuth from "@/hooks/useAuth"
 import {
@@ -49,6 +51,17 @@ const Sidebar = () => {
           <DrawerBody>
             <Flex flexDir="column" justify="space-between">
               <Box>
+                <Link to="/">
+                  <Image 
+                    src={Logo} 
+                    alt="Logo" 
+                    w="120px"
+                    h="auto"
+                    objectFit="contain"
+                    p={2}
+                    mb={4}
+                  />
+                </Link>
                 <SidebarItems onClose={() => setOpen(false)} />
                 <Flex
                   as="button"
@@ -76,7 +89,6 @@ const Sidebar = () => {
       </DrawerRoot>
 
       {/* Desktop */}
-
       <Box
         display={{ base: "none", md: "flex" }}
         position="sticky"
@@ -86,9 +98,36 @@ const Sidebar = () => {
         h="100vh"
         p={4}
       >
-        <Box w="100%">
-          <SidebarItems />
-        </Box>
+        <Flex flexDir="column" w="100%" h="100%">
+          <Link to="/">
+            <Image 
+              src={Logo} 
+              alt="Logo" 
+              w="120px"
+              h="auto"
+              objectFit="contain"
+              p={2}
+              mb={4}
+            />
+          </Link>
+          <Box flex="1">
+            <SidebarItems />
+          </Box>
+          <Flex
+            as="button"
+            onClick={() => {
+              logout()
+            }}
+            alignItems="center"
+            gap={4}
+            px={4}
+            py={2}
+            mt="auto"
+          >
+            <FiLogOut />
+            <Text>Log Out</Text>
+          </Flex>
+        </Flex>
       </Box>
     </>
   )

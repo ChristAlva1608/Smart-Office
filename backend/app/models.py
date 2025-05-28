@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, UTC
 
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
@@ -111,3 +112,8 @@ class TokenPayload(SQLModel):
 class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
+
+class CoreIoTData(SQLModel):
+    temperature: float
+    humidity: float
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
