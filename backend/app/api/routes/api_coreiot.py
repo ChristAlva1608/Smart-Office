@@ -11,7 +11,7 @@ router = APIRouter(prefix="/coreiot", tags=["coreiot"])
 logger = logging.getLogger(__name__)
 
 coreiot_jwt_token = {
-    'access_token': 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJraGFuaC5tYWkxNjA4MDNAaGNtdXQuZWR1LnZuIiwidXNlcklkIjoiMzU1MmQ2MDAtZTg5Zi0xMWVmLTg3YjUtMjFiY2NmN2QyOWQ1Iiwic2NvcGVzIjpbIlRFTkFOVF9BRE1JTiJdLCJzZXNzaW9uSWQiOiJmMWE0ZjYxYi0xODM0LTRiM2EtODQ4NC0wMjBhMTZkMTVhNDQiLCJleHAiOjE3NDg0NTgwNzcsImlzcyI6ImNvcmVpb3QuaW8iLCJpYXQiOjE3NDg0NDkwNzcsImZpcnN0TmFtZSI6IktIw4FOSCIsImxhc3ROYW1lIjoiTUFJIFTDlE4gxJDEgk5HIiwiZW5hYmxlZCI6dHJ1ZSwiaXNQdWJsaWMiOmZhbHNlLCJ0ZW5hbnRJZCI6IjM1NDVkZGIwLWU4OWYtMTFlZi04N2I1LTIxYmNjZjdkMjlkNSIsImN1c3RvbWVySWQiOiIxMzgxNDAwMC0xZGQyLTExYjItODA4MC04MDgwODA4MDgwODAifQ.e9Mh02d070qxjQjeybiF5u7zJHDG5GRA7a0fwy-YNi8WQS_9p5t8QXlysZxaWUvpJGMKr4SSEwf_HTSAGYG1kw',
+    'access_token':'',
     'type': 'Bearer'
 }
  
