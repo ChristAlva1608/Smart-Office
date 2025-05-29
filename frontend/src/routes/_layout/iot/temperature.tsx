@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
-import { useSensorData } from "@/hooks/useSensorData"
+import { useSensorData, useDailySensorData } from "@/hooks/useSensorData"
 
 // Register ChartJS components
 ChartJS.register(
@@ -30,27 +30,23 @@ export const Route = createFileRoute("/_layout/iot/temperature")({
 })
 
 function TemperatureDetail() {
-  const { data: temperatureData, isLoading: isTemperatureLoading } = useSensorData('temperature')
+  const { data: latestData, isLoading: isLatestLoading } = useSensorData('temperature')
+  const { data: dailyTemperatureData, isLoading: isDailyLoading } = useDailySensorData('temperature')
 
-  // Generate sample data for 24 hours
-  const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`)
-  const data = {
-    labels,
+  const chartData = {
+    labels: dailyTemperatureData?.map(point => point.timestamp) || [],
     datasets: [
       {
-        label: 'Temperature (°C)',
-        data: [22, 23, 22, 21, 20, 19, 20, 21, 22, 23, 24, 25, 26, 25, 24, 23, 22, 21, 20, 21, 22, 23, 24, 25],
+        label: 'Temperature',
+        data: dailyTemperatureData?.map(point => point.value) || [],
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.5)',
-        tension: 0.4,
-        fill: true,
-      },
-    ],
+      }
+    ]
   }
 
   const options = {
     responsive: true,
-    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
@@ -62,8 +58,7 @@ function TemperatureDetail() {
     },
     scales: {
       y: {
-        min: 15,
-        max: 30,
+        beginAtZero: false,
         title: {
           display: true,
           text: 'Temperature (°C)'
@@ -72,11 +67,20 @@ function TemperatureDetail() {
       x: {
         title: {
           display: true,
-          text: 'Hour'
+          text: 'Hours'
         }
       }
     }
   }
+
+  if (isLatestLoading || isDailyLoading) {
+    return <div>Loading temperature data...</div>
+  }
+
+  // Calculate min and max from daily data
+  const values = dailyTemperatureData?.map(point => point.value) || []
+  const maxTemperature = values.length > 0 ? Math.max(...values) : 0
+  const minTemperature = values.length > 0 ? Math.min(...values) : 0
 
   return (
     <Box>
@@ -106,7 +110,7 @@ function TemperatureDetail() {
 
       <Box p={4}>
         <Box p={6} bg="white" borderRadius="lg" shadow="sm" h="400px">
-          <Line options={options} data={data} />
+          <Line data={chartData} options={options} />
         </Box>
 
         <Box mt={6} p={6} bg="white" borderRadius="lg" shadow="sm">
@@ -115,28 +119,28 @@ function TemperatureDetail() {
             <Box>
               <Text color="gray.500" fontSize="sm">Current Temperature</Text>
               <Text fontSize="2xl" fontWeight="bold" color="red.500">
-                {isTemperatureLoading ? "Loading..." : `${temperatureData?.value}°C`}
+                {latestData ? `${latestData.value}°C` : "No data"}
               </Text>
             </Box>
             <Box>
               <Text color="gray.500" fontSize="sm">Last Updated</Text>
               <Text fontSize="2xl" fontWeight="bold">
-                {isTemperatureLoading ? "..." : new Date(temperatureData?.timestamp || "").toLocaleTimeString()}
+                {latestData ? new Date(latestData.timestamp).toLocaleTimeString() : "No data"}
               </Text>
             </Box>
             <Box>
               <Text color="gray.500" fontSize="sm">Highest Temperature</Text>
-              <Text fontSize="2xl" fontWeight="bold">26°C</Text>
+              <Text fontSize="2xl" fontWeight="bold">{maxTemperature}°C</Text>
             </Box>
             <Box>
               <Text color="gray.500" fontSize="sm">Lowest Temperature</Text>
-              <Text fontSize="2xl" fontWeight="bold">19°C</Text>
+              <Text fontSize="2xl" fontWeight="bold">{minTemperature}°C</Text>
             </Box>
           </Flex>
         </Box>
       </Box>
     </Box>
   )
-}
+} 
 
-export default TemperatureDetail 
+export default TemperatureDetail

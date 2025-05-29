@@ -113,7 +113,8 @@ class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
 
-class CoreIoTData(SQLModel):
+class CoreIoTData(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     temperature: float
     humidity: float
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))

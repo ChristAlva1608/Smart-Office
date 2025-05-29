@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
-import { useSensorData } from "@/hooks/useSensorData"
+import { useSensorData, useDailySensorData } from "@/hooks/useSensorData"
 
 // Register ChartJS components
 ChartJS.register(
@@ -30,27 +30,23 @@ export const Route = createFileRoute("/_layout/iot/humidity")({
 })
 
 function HumidityDetail() {
-  const { data: humidityData, isLoading: isHumidityLoading } = useSensorData('humidity')
+  const { data: latestData, isLoading: isLatestLoading } = useSensorData('humidity')
+  const { data: dailyHumidityData, isLoading: isDailyLoading } = useDailySensorData('humidity')
 
-  // Generate sample data for 24 hours
-  const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`)
-  const data = {
-    labels,
+  const chartData = {
+    labels: dailyHumidityData?.map(point => point.timestamp) || [],
     datasets: [
       {
-        label: 'Humidity (%)',
-        data: [65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88],
-        borderColor: 'rgb(54, 162, 235)',
-        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-        tension: 0.4,
-        fill: true,
-      },
-    ],
+        label: 'Humidity',
+        data: dailyHumidityData?.map(point => point.value) || [],
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+      }
+    ]
   }
 
   const options = {
     responsive: true,
-    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
@@ -62,8 +58,7 @@ function HumidityDetail() {
     },
     scales: {
       y: {
-        min: 0,
-        max: 100,
+        beginAtZero: false,
         title: {
           display: true,
           text: 'Humidity (%)'
@@ -72,11 +67,20 @@ function HumidityDetail() {
       x: {
         title: {
           display: true,
-          text: 'Hour'
+          text: 'Hours'
         }
       }
     }
   }
+
+  if (isLatestLoading || isDailyLoading) {
+    return <div>Loading humidity data...</div>
+  }
+
+  // Calculate min and max from daily data
+  const values = dailyHumidityData?.map(point => point.value) || []
+  const maxHumidity = values.length > 0 ? Math.max(...values) : 0
+  const minHumidity = values.length > 0 ? Math.min(...values) : 0
 
   return (
     <Box>
@@ -106,7 +110,7 @@ function HumidityDetail() {
 
       <Box p={4}>
         <Box p={6} bg="white" borderRadius="lg" shadow="sm" h="400px">
-          <Line options={options} data={data} />
+          <Line data={chartData} options={options} />
         </Box>
 
         <Box mt={6} p={6} bg="white" borderRadius="lg" shadow="sm">
@@ -115,22 +119,22 @@ function HumidityDetail() {
             <Box>
               <Text color="gray.500" fontSize="sm">Current Humidity</Text>
               <Text fontSize="2xl" fontWeight="bold" color="blue.500">
-                {isHumidityLoading ? "Loading..." : `${humidityData?.value}%`}
+                {latestData ? `${latestData.value}%` : "No data"}
               </Text>
             </Box>
             <Box>
               <Text color="gray.500" fontSize="sm">Last Updated</Text>
               <Text fontSize="2xl" fontWeight="bold">
-                {isHumidityLoading ? "..." : new Date(humidityData?.timestamp || "").toLocaleTimeString()}
+                {latestData ? new Date(latestData.timestamp).toLocaleTimeString() : "No data"}
               </Text>
             </Box>
             <Box>
               <Text color="gray.500" fontSize="sm">Highest Humidity</Text>
-              <Text fontSize="2xl" fontWeight="bold">88%</Text>
+              <Text fontSize="2xl" fontWeight="bold">{maxHumidity}%</Text>
             </Box>
             <Box>
               <Text color="gray.500" fontSize="sm">Lowest Humidity</Text>
-              <Text fontSize="2xl" fontWeight="bold">65%</Text>
+              <Text fontSize="2xl" fontWeight="bold">{minHumidity}%</Text>
             </Box>
           </Flex>
         </Box>

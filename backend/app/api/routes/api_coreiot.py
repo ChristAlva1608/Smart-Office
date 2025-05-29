@@ -1,8 +1,9 @@
-import uuid
-from typing import Any
+from typing import Any, List
 import logging
+from datetime import datetime, timedelta
+from sqlmodel import select
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 import requests
 from app.api.deps import CurrentUser, SessionDep
 from app.models import Item, ItemCreate, ItemPublic, ItemsPublic, ItemUpdate, Message, CoreIoTData
@@ -11,10 +12,10 @@ router = APIRouter(prefix="/coreiot", tags=["coreiot"])
 logger = logging.getLogger(__name__)
 
 coreiot_jwt_token = {
-    'access_token':'',
+    'access_token': '',
     'type': 'Bearer'
 }
- 
+
 headers = {
     'Authorization': f'{coreiot_jwt_token["type"]} {coreiot_jwt_token["access_token"]}',
     'Content-Type': 'application/json'
@@ -59,6 +60,11 @@ def get_coreiot_data(
                 temperature=float(data['temperature'][-1]['value']),
                 humidity=float(data['humidity'][-1]['value'])
             )
+
+            session.add(latest_data)
+            session.commit()
+            session.refresh(latest_data)
+
             return latest_data
         else:
             logger.error(f"CoreIoT API error: {response.status_code} - {response.text}")
@@ -79,3 +85,20 @@ def get_coreiot_data(
             detail=f"Internal server error: {str(e)}"
         )
 
+@router.get("/daily-data", response_model=List[CoreIoTData])
+def get_daily_data(
+    type: str,
+    session: SessionDep
+):
+    """
+    Get daily data for a specific type (temperature or humidity)
+    """
+    if type not in ["temperature", "humidity"]:
+        raise HTTPException(status_code=400, detail="Type must be either 'temperature' or 'humidity'")
+    
+    statement = select(CoreIoTData).where(
+        CoreIoTData.timestamp >= datetime.now() - timedelta(days=1)
+    ).order_by(CoreIoTData.timestamp.asc())  # Order by timestamp ascending for proper chart display
+    
+    result = session.exec(statement)
+    return result.all()
