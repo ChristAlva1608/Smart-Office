@@ -1,4 +1,4 @@
-import { Box, Container, Text, Flex, Heading, Icon, Button } from "@chakra-ui/react"
+import { Box, Text, Flex, Heading, Icon, Button } from "@chakra-ui/react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { FiDroplet, FiArrowLeft } from "react-icons/fi"
 import { Line } from "react-chartjs-2"
