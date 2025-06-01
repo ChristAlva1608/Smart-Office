@@ -58,7 +58,8 @@ def get_coreiot_data(
                 
             latest_data = CoreIoTData(
                 temperature=float(data['temperature'][-1]['value']),
-                humidity=float(data['humidity'][-1]['value'])
+                humidity=float(data['humidity'][-1]['value']),
+                timestamp=datetime.fromtimestamp(data['temperature'][-1]['ts'] / 1000)  # Convert milliseconds to seconds
             )
 
             session.add(latest_data)
@@ -102,3 +103,49 @@ def get_daily_data(
     
     result = session.exec(statement)
     return result.all()
+
+# pseudo code for alarm and turn on/off the fan
+# if temp > thres, show alarm on screen and find ways to send request to activate rpc function
+# if temp < thres, turn off the fan and hide the alarm
+
+@router.post("/control-fan")
+def control_fan(
+    session: SessionDep,
+    current_user: CurrentUser,
+    turn_on: bool
+):
+    """
+    Control the fan
+    """
+    try:
+        deviceId = '7af4ea90-e89f-11ef-87b5-21bccf7d29d5'
+        rpc_api = f'https://app.coreiot.io/api/rpc/oneway/{deviceId}'
+        
+        logger.info(f"Sending fan control command: {'on' if turn_on else 'off'}")
+        response = requests.post(
+            rpc_api, 
+            headers=headers, 
+            json={"method": "setFanState", "params": turn_on}
+        )
+        
+        if response.status_code == 200:
+            logger.info(f"Fan control command sent successfully: {response.json()}")
+            return {"status": "success", "message": f"Fan turned {'on' if turn_on else 'off'}"}
+        else:
+            logger.error(f"Failed to control fan: {response.status_code} - {response.text}")
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Failed to control fan: {response.text}"
+            )
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error controlling fan: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Error connecting to CoreIoT: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error controlling fan: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
