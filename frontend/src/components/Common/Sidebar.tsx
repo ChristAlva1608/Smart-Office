@@ -17,6 +17,7 @@ import {
   DrawerTrigger,
 } from "../ui/drawer"
 import SidebarItems from "./SidebarItems"
+import NotificationBell from "./NotificationBell"
 
 const Sidebar = () => {
   const queryClient = useQueryClient()
@@ -62,6 +63,9 @@ const Sidebar = () => {
                     mb={4}
                   />
                 </Link>
+                <Box mb={2}>
+                  <NotificationBell />
+                </Box>
                 <SidebarItems onClose={() => setOpen(false)} />
                 <Flex
                   as="button"
@@ -111,6 +115,9 @@ const Sidebar = () => {
             />
           </Link>
           <Box flex="1">
+            <Box mb={2}>
+              <NotificationBell />
+            </Box>
             <SidebarItems />
           </Box>
           <Flex

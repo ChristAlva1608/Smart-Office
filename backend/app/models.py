@@ -119,8 +119,77 @@ class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
 
+
 class CoreIoTData(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     temperature: float
     humidity: float
     timestamp: datetime = Field(default_factory=lambda: datetime.now)
+
+
+class AlarmBase(SQLModel):
+    type: str = Field(description="Type of alarm: 'temperature' or 'humidity'")
+    threshold_type: str = Field(description="'above' or 'below'")
+    value: float = Field(description="Threshold value")
+    is_active: bool = Field(default=True)
+
+
+class AlarmCreate(AlarmBase):
+    pass
+
+
+class AlarmUpdate(SQLModel):
+    type: str | None = None
+    threshold_type: str | None = None
+    value: float | None = None
+    is_active: bool | None = None
+
+
+class Alarm(AlarmBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
+    user: User | None = Relationship()
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AlarmPublic(AlarmBase):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class AlarmsPublic(SQLModel):
+    data: list[AlarmPublic]
+    count: int
+
+
+class NotificationBase(SQLModel):
+    message: str
+    is_read: bool = False
+    alarm_id: uuid.UUID | None = None
+
+
+class NotificationCreate(NotificationBase):
+    user_id: uuid.UUID
+    alarm_id: uuid.UUID | None = None
+
+
+class Notification(NotificationBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
+    alarm_id: uuid.UUID | None = Field(default=None, foreign_key="alarm.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class NotificationPublic(NotificationBase):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    alarm_id: uuid.UUID | None = None
+    created_at: datetime
+
+
+class NotificationsPublic(SQLModel):
+    data: list[NotificationPublic]
+    count: int

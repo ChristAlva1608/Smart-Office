@@ -6,12 +6,14 @@ import Appearance from "@/components/UserSettings/Appearance"
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
+import AlarmSettings from "@/components/UserSettings/AlarmSettings"
 import useAuth from "@/hooks/useAuth"
 
 const tabsConfig = [
   { value: "my-profile", title: "My profile", icon: FiUser, component: UserInformation },
   { value: "password", title: "Password", icon: FiLock, component: ChangePassword },
   { value: "appearance", title: "Appearance", icon: FiSettings, component: Appearance },
+  { value: "alarms", title: "Notification Alarms", icon: FiAlertTriangle, component: AlarmSettings },
   { value: "danger-zone", title: "Danger zone", icon: FiAlertTriangle, component: DeleteAccount },
 ]
 

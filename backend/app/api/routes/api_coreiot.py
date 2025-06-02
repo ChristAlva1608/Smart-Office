@@ -6,12 +6,13 @@ from sqlmodel import select
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 import requests
 from app.api.deps import CurrentUser, SessionDep
-from app.models import CoreIoTData, User
+from app.models import CoreIoTData, User, NotificationCreate
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import joblib
 import os
+from app import crud
 
 # Directory to save models
 MODEL_DIR = "models"
@@ -91,10 +92,45 @@ def get_coreiot_data(
             session.commit()
             session.refresh(latest_data)
 
+            # Check alarms for this user
+            alarms = crud.get_alarms_by_user(session, user_id=current_user.id)
+            notifications = []
+            for alarm in alarms:
+                if not alarm.is_active:
+                    continue
+                if alarm.type == "temperature":
+                    value = latest_data.temperature
+                elif alarm.type == "humidity":
+                    value = latest_data.humidity
+                else:
+                    continue
+                if alarm.threshold_type == "above" and value > alarm.value:
+                    msg = f"{alarm.type.title()} is above {alarm.value} (actual: {value})"
+                    notifications.append((msg, alarm.id))
+                elif alarm.threshold_type == "below" and value < alarm.value:
+                    msg = f"{alarm.type.title()} is below {alarm.value} (actual: {value})"
+                    notifications.append((msg, alarm.id))
+            if notifications:
+                for note, alarm_id in notifications:
+                    logger.warning(f"[ALARM NOTIFICATION] User {current_user.id}: {note}")
+                    crud.create_notification(
+                        session=session,
+                        notification_create=NotificationCreate(
+                            message=note,
+                            user_id=current_user.id,
+                            alarm_id=alarm_id,
+                        ),
+                    )
+
             # Check if at least 1 minute has passed since last training
             user = session.get(User, current_user.id)
             now = datetime.now(timezone.utc)
-            if not user.last_trained_at or (now - user.last_trained_at) >= timedelta(minutes=1):
+            last_trained_at = user.last_trained_at
+            if last_trained_at is not None and last_trained_at.tzinfo is None:
+                # Make naive datetime UTC-aware
+                last_trained_at = last_trained_at.replace(tzinfo=timezone.utc)
+
+            if not last_trained_at or (now - last_trained_at) >= timedelta(minutes=1):
                 # Schedule background training for both metrics
                 def background_train():
                     # Use a new session in the background task
