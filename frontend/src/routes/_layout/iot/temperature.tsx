@@ -1,4 +1,4 @@
-import { Box, Text, Flex, Heading, Icon, Button } from "@chakra-ui/react"
+import { Box, Text, Flex, Heading, Icon, Button, SimpleGrid } from "@chakra-ui/react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { FiThermometer, FiArrowLeft } from "react-icons/fi"
 import { Line } from "react-chartjs-2"
@@ -84,60 +84,63 @@ function TemperatureDetail() {
 
   return (
     <Box>
-      <Flex 
-        align="center" 
-        h="120px" 
-        px={4}
+      {/* Header */}
+      <Flex
+        align="center"
+        h="80px"
+        px={{ base: 2, md: 6 }}
         borderBottom="1px solid"
         borderColor="gray.200"
         bg="white"
+        gap={4}
       >
         <Link to="/iot">
-          <Button 
-            variant="ghost" 
-            mr={4}
-            _hover={{ bg: 'gray.100' }}
-          >
+          <Button variant="ghost" _hover={{ bg: 'gray.100' }}>
             <Icon as={FiArrowLeft} mr={2} />
             Back to Dashboard
           </Button>
         </Link>
-        <Flex align="center" gap={3}>
-          <Icon as={FiThermometer} boxSize={8} color="red.500" />
-          <Heading size="lg">Temperature Details</Heading>
+        <Flex align="center" gap={2}>
+          <Icon as={FiThermometer} boxSize={7} color="red.500" />
+          <Heading size="md">Temperature Details</Heading>
         </Flex>
       </Flex>
 
-      <Box p={4}>
-        <Box p={6} bg="white" borderRadius="lg" shadow="sm" h="400px">
-          <Line data={chartData} options={options} />
-        </Box>
+      {/* Main Content */}
+      <Box p={{ base: 2, md: 6 }}>
+        <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+          {/* Chart */}
+          <Box bg="white" borderRadius="lg" shadow="sm" p={4} minH="400px" display="flex" flexDir="column" justifyContent="center">
+            <Line data={chartData} options={options} />
+          </Box>
 
-        <Box mt={6} p={6} bg="white" borderRadius="lg" shadow="sm">
-          <Heading size="md" mb={4}>Temperature Statistics</Heading>
-          <Flex gap={6} wrap="wrap">
-            <Box>
-              <Text color="gray.500" fontSize="sm">Current Temperature</Text>
-              <Text fontSize="2xl" fontWeight="bold" color="red.500">
-                {latestData ? `${latestData.value}°C` : "No data"}
-              </Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">Last Updated</Text>
-              <Text fontSize="2xl" fontWeight="bold">
-                {latestData ? new Date(latestData.timestamp).toLocaleTimeString() : "No data"}
-              </Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">Highest Temperature</Text>
-              <Text fontSize="2xl" fontWeight="bold">{maxTemperature}°C</Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">Lowest Temperature</Text>
-              <Text fontSize="2xl" fontWeight="bold">{minTemperature}°C</Text>
-            </Box>
-          </Flex>
-        </Box>
+          {/* Statistics */}
+          <Box bg="white" borderRadius="lg" shadow="sm" p={6} display="flex" flexDir="column" justifyContent="center">
+            <Heading size="md" mb={4}>Temperature Statistics</Heading>
+            <SimpleGrid columns={2} gap={4}>
+              <Box>
+                <Text color="gray.500" fontSize="sm">Current Temperature</Text>
+                <Text fontSize="3xl" fontWeight="bold" color="red.500">
+                  {latestData ? `${latestData.value}°C` : "No data"}
+                </Text>
+              </Box>
+              <Box>
+                <Text color="gray.500" fontSize="sm">Last Updated</Text>
+                <Text fontSize="xl" fontWeight="semibold">
+                  {latestData ? new Date(latestData.timestamp).toLocaleTimeString() : "No data"}
+                </Text>
+              </Box>
+              <Box>
+                <Text color="gray.500" fontSize="sm">Highest Temperature</Text>
+                <Text fontSize="2xl" fontWeight="bold">{maxTemperature}°C</Text>
+              </Box>
+              <Box>
+                <Text color="gray.500" fontSize="sm">Lowest Temperature</Text>
+                <Text fontSize="2xl" fontWeight="bold">{minTemperature}°C</Text>
+              </Box>
+            </SimpleGrid>
+          </Box>
+        </SimpleGrid>
       </Box>
     </Box>
   )

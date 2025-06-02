@@ -1,5 +1,5 @@
-import { Flex, Image, useBreakpointValue } from "@chakra-ui/react"
-import { Link } from "@tanstack/react-router"
+import React from "react"
+import { Flex, Image, useBreakpointValue, Box, Text } from "@chakra-ui/react"
 
 import Logo from "/assets/images/smart-home.png"
 import UserMenu from "./UserMenu"
@@ -12,23 +12,29 @@ function Navbar() {
       display={display}
       justify="space-between"
       position="sticky"
-      color="white"
+      color="gray.900"
       align="center"
-      bg="bg.muted"
+      bg="white"
       w="100%"
       top={0}
       p={4}
+      boxShadow="sm"
+      zIndex={10}
     >
-      <Link to="/">
-        <Image 
-          src={Logo} 
-          alt="Logo" 
-          w="120px"
-          h="auto"
-          objectFit="contain"
-          p={2} 
-        />
-      </Link>
+      <Flex align="center" gap={4}>
+        <Box bg="teal.50" borderRadius="lg" p={1} display="flex" alignItems="center" justifyContent="center">
+          <Image 
+            src={Logo} 
+            alt="Logo" 
+            w="40px"
+            h="40px"
+            objectFit="contain"
+          />
+        </Box>
+        <Text fontWeight="bold" fontSize="xl" color="teal.700" letterSpacing="wide">
+          SmartHome
+        </Text>
+      </Flex>
       <Flex gap={2} alignItems="center">
         <UserMenu />
       </Flex>

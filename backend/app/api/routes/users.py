@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlmodel import col, delete, func, select
 
 from app import crud
@@ -224,3 +224,17 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+@router.patch("/me/coreiot-token", response_model=UserPublic)
+def update_coreiot_token_me(
+    *, session: SessionDep, current_user: CurrentUser, coreiot_access_token: str = Body(..., embed=True)
+) -> Any:
+    """
+    Update own CoreIoT access token.
+    """
+    current_user.coreiot_access_token = coreiot_access_token
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return current_user

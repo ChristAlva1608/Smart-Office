@@ -68,3 +68,27 @@ export function useDailySensorData(type: 'temperature' | 'humidity') {
     enabled: isLoggedIn()
   })
 } 
+
+export function usePredictNextMetric(type: 'temperature' | 'humidity') {
+  return useQuery({
+    queryKey: ['coreiot-predict-next', type],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+      const response = await axios.get<{ predicted_next: number }>('http://localhost:8000/api/v1/coreiot/predict-next', {
+        params: { type },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      return {
+        value: response.data.predicted_next,
+        unit: type === 'temperature' ? '°C' : '%'
+      }
+    },
+    refetchInterval: 1000, // Refetch every 1 second
+    enabled: isLoggedIn()
+  })
+} 
