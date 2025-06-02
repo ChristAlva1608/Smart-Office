@@ -4,6 +4,13 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  CoreiotGetCoreiotDataResponse,
+  CoreiotGetDailyDataData,
+  CoreiotGetDailyDataResponse,
+  CoreiotControlFanData,
+  CoreiotControlFanResponse,
+  CoreiotPredictNextMetricData,
+  CoreiotPredictNextMetricResponse,
   ItemsReadItemsData,
   ItemsReadItemsResponse,
   ItemsCreateItemData,
@@ -43,10 +50,96 @@ import type {
   UsersUpdateUserResponse,
   UsersDeleteUserData,
   UsersDeleteUserResponse,
+  UsersUpdateCoreiotTokenMeData,
+  UsersUpdateCoreiotTokenMeResponse,
   UtilsTestEmailData,
   UtilsTestEmailResponse,
   UtilsHealthCheckResponse,
 } from "./types.gen"
+
+export class CoreiotService {
+  /**
+   * Get Coreiot Data
+   * Get latest sensor data from CoreIoT
+   * @returns CoreIoTData Successful Response
+   * @throws ApiError
+   */
+  public static getCoreiotData(): CancelablePromise<CoreiotGetCoreiotDataResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/coreiot/coreiot-data",
+    })
+  }
+
+  /**
+   * Get Daily Data
+   * Get daily data for a specific type (temperature or humidity)
+   * @param data The data for the request.
+   * @param data.type
+   * @returns CoreIoTData Successful Response
+   * @throws ApiError
+   */
+  public static getDailyData(
+    data: CoreiotGetDailyDataData,
+  ): CancelablePromise<CoreiotGetDailyDataResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/coreiot/daily-data",
+      query: {
+        type: data.type,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Control Fan
+   * Control the fan
+   * @param data The data for the request.
+   * @param data.turnOn
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static controlFan(
+    data: CoreiotControlFanData,
+  ): CancelablePromise<CoreiotControlFanResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/coreiot/control-fan",
+      query: {
+        turn_on: data.turnOn,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Predict Next Metric
+   * Predict the next value for a metric (temperature or humidity) for the current user.
+   * @param data The data for the request.
+   * @param data.type
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static predictNextMetric(
+    data: CoreiotPredictNextMetricData,
+  ): CancelablePromise<CoreiotPredictNextMetricResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/coreiot/predict-next",
+      query: {
+        type: data.type,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class ItemsService {
   /**
@@ -504,6 +597,28 @@ export class UsersService {
       path: {
         user_id: data.userId,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Coreiot Token Me
+   * Update own CoreIoT access token.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateCoreiotTokenMe(
+    data: UsersUpdateCoreiotTokenMeData,
+  ): CancelablePromise<UsersUpdateCoreiotTokenMeResponse> {
+    return __request(OpenAPI, {
+      method: "PATCH",
+      url: "/api/v1/users/me/coreiot-token",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },

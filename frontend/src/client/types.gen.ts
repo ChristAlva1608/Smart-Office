@@ -9,6 +9,17 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
+export type Body_users_update_coreiot_token_me = {
+  coreiot_access_token: string
+}
+
+export type CoreIoTData = {
+  id?: string
+  temperature: number
+  humidity: number
+  timestamp?: string
+}
+
 export type HTTPValidationError = {
   detail?: Array<ValidationError>
 }
@@ -66,6 +77,7 @@ export type UserCreate = {
   is_active?: boolean
   is_superuser?: boolean
   full_name?: string | null
+  coreiot_access_token?: string | null
   password: string
 }
 
@@ -74,6 +86,7 @@ export type UserPublic = {
   is_active?: boolean
   is_superuser?: boolean
   full_name?: string | null
+  coreiot_access_token?: string | null
   id: string
 }
 
@@ -93,12 +106,14 @@ export type UserUpdate = {
   is_active?: boolean
   is_superuser?: boolean
   full_name?: string | null
+  coreiot_access_token?: string | null
   password?: string | null
 }
 
 export type UserUpdateMe = {
   full_name?: string | null
   email?: string | null
+  coreiot_access_token?: string | null
 }
 
 export type ValidationError = {
@@ -106,6 +121,26 @@ export type ValidationError = {
   msg: string
   type: string
 }
+
+export type CoreiotGetCoreiotDataResponse = CoreIoTData
+
+export type CoreiotGetDailyDataData = {
+  type: string
+}
+
+export type CoreiotGetDailyDataResponse = Array<CoreIoTData>
+
+export type CoreiotControlFanData = {
+  turnOn: boolean
+}
+
+export type CoreiotControlFanResponse = unknown
+
+export type CoreiotPredictNextMetricData = {
+  type: string
+}
+
+export type CoreiotPredictNextMetricResponse = unknown
 
 export type ItemsReadItemsData = {
   limit?: number
@@ -224,6 +259,12 @@ export type UsersDeleteUserData = {
 }
 
 export type UsersDeleteUserResponse = Message
+
+export type UsersUpdateCoreiotTokenMeData = {
+  requestBody: Body_users_update_coreiot_token_me
+}
+
+export type UsersUpdateCoreiotTokenMeResponse = UserPublic
 
 export type UtilsTestEmailData = {
   emailTo: string

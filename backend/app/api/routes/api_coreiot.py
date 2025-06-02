@@ -1,36 +1,61 @@
 from typing import Any, List
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlmodel import select
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 import requests
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Item, ItemCreate, ItemPublic, ItemsPublic, ItemUpdate, Message, CoreIoTData
+from app.models import CoreIoTData, User
+
+import numpy as np
+from sklearn.linear_model import LinearRegression
+import joblib
+import os
+
+# Directory to save models
+MODEL_DIR = "models"
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/coreiot", tags=["coreiot"])
 logger = logging.getLogger(__name__)
 
-coreiot_jwt_token = {
-    'access_token': '',
-    'type': 'Bearer'
-}
 
-headers = {
-    'Authorization': f'{coreiot_jwt_token["type"]} {coreiot_jwt_token["access_token"]}',
-    'Content-Type': 'application/json'
-}
+def train_user_model(user_id, session, metric_type="temperature"):
+    logger.info(f"Training model for user {user_id} and metric {metric_type}")
+    # Fetch last N data points for this user
+    N = 20
+    statement = select(CoreIoTData).order_by(CoreIoTData.timestamp.desc()).limit(N)
+    result = session.exec(statement)
+    data = result.all()[::-1]  # oldest to newest
+    if len(data) < 2:
+        return
+    values = np.array([getattr(d, metric_type) for d in data]).reshape(-1, 1)
+    X = np.arange(len(values)).reshape(-1, 1)
+    y = values
+    model = LinearRegression()
+    model.fit(X, y)
+    # Save the model per user and metric
+    model_path = os.path.join(MODEL_DIR, f"user_{user_id}_{metric_type}.joblib")
+    joblib.dump(model, model_path)
+    logger.info(f"Model saved to {model_path}")
 
 @router.get("/coreiot-data", response_model=CoreIoTData)
 def get_coreiot_data(
-    session: SessionDep, current_user: CurrentUser
+    session: SessionDep, current_user: CurrentUser, background_tasks: BackgroundTasks
 ) -> Any:
     """
     Get latest sensor data from CoreIoT
     """
+    if not current_user.coreiot_access_token:
+        logger.error("CoreIoT access token not set for user.")
+        raise HTTPException(status_code=400, detail="CoreIoT access token not set for user.")
+    headers = {
+        'X-Authorization': f'Bearer {current_user.coreiot_access_token}'
+    }
     try:
         entityType = 'DEVICE'
-        entityId = '7af4ea90-e89f-11ef-87b5-21bccf7d29d5'
+        entityId = '3c4f5c80-f790-11ef-a887-6d1a184f2bb5'
         api = f'/api/plugins/telemetry/{entityType}/{entityId}/values/timeseries?keys=humidity%2Ctemperature&useStrictDataTypes=false'
         url = f'https://app.coreiot.io{api}'
         
@@ -59,13 +84,30 @@ def get_coreiot_data(
             latest_data = CoreIoTData(
                 temperature=float(data['temperature'][-1]['value']),
                 humidity=float(data['humidity'][-1]['value']),
-                timestamp=datetime.fromtimestamp(data['temperature'][-1]['ts'] / 1000)  # Convert milliseconds to seconds
+                timestamp=datetime.fromtimestamp(data['temperature'][-1]['ts'] / 1000, tz=timezone.utc)  # UTC-aware datetime
             )
 
             session.add(latest_data)
             session.commit()
             session.refresh(latest_data)
 
+            # Check if at least 1 minute has passed since last training
+            user = session.get(User, current_user.id)
+            now = datetime.now(timezone.utc)
+            if not user.last_trained_at or (now - user.last_trained_at) >= timedelta(minutes=1):
+                # Schedule background training for both metrics
+                def background_train():
+                    # Use a new session in the background task
+                    with session.bind.connect() as conn:
+                        with SessionDep.__origin__(conn) as bg_session:
+                            train_user_model(user.id, bg_session, "temperature")
+                            train_user_model(user.id, bg_session, "humidity")
+                            user.last_trained_at = now
+                            bg_session.add(user)
+                            bg_session.commit()
+                
+                logger.info(f"Scheduling background training for user {user.id}")
+                background_tasks.add_task(background_train)
             return latest_data
         else:
             logger.error(f"CoreIoT API error: {response.status_code} - {response.text}")
@@ -149,3 +191,32 @@ def control_fan(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
+
+@router.get("/predict-next")
+def predict_next_metric(
+    type: str,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    """
+    Predict the next value for a metric (temperature or humidity) for the current user.
+    """
+    if type not in ["temperature", "humidity"]:
+        raise HTTPException(status_code=400, detail="Type must be either 'temperature' or 'humidity'")
+    # Load the model
+    model_path = os.path.join(MODEL_DIR, f"user_{current_user.id}_{type}.joblib")
+    if not os.path.exists(model_path):
+        raise HTTPException(status_code=404, detail="Model not trained yet. Please wait for more data.")
+    model = joblib.load(model_path)
+    # Fetch last N data points
+    N = 20
+    statement = select(CoreIoTData).order_by(CoreIoTData.timestamp.desc()).limit(N)
+    result = session.exec(statement)
+    data = result.all()[::-1]  # oldest to newest
+    if len(data) < 2:
+        raise HTTPException(status_code=400, detail="Not enough data to predict")
+    values = np.array([getattr(d, type) for d in data]).reshape(-1, 1)
+    next_x = np.array([[len(values)]])
+    next_value = model.predict(next_x)[0][0]
+    logger.info(f"Predicted next {type} value: {next_value}")
+    return {"predicted_next": next_value}

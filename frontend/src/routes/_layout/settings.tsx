@@ -1,5 +1,6 @@
 import { Container, Heading, Tabs } from "@chakra-ui/react"
 import { createFileRoute } from "@tanstack/react-router"
+import { FiUser, FiLock, FiSettings, FiAlertTriangle } from "react-icons/fi"
 
 import Appearance from "@/components/UserSettings/Appearance"
 import ChangePassword from "@/components/UserSettings/ChangePassword"
@@ -8,10 +9,10 @@ import UserInformation from "@/components/UserSettings/UserInformation"
 import useAuth from "@/hooks/useAuth"
 
 const tabsConfig = [
-  { value: "my-profile", title: "My profile", component: UserInformation },
-  { value: "password", title: "Password", component: ChangePassword },
-  { value: "appearance", title: "Appearance", component: Appearance },
-  { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
+  { value: "my-profile", title: "My profile", icon: FiUser, component: UserInformation },
+  { value: "password", title: "Password", icon: FiLock, component: ChangePassword },
+  { value: "appearance", title: "Appearance", icon: FiSettings, component: Appearance },
+  { value: "danger-zone", title: "Danger zone", icon: FiAlertTriangle, component: DeleteAccount },
 ]
 
 export const Route = createFileRoute("/_layout/settings")({
@@ -33,11 +34,11 @@ function UserSettings() {
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         User Settings
       </Heading>
-
-      <Tabs.Root defaultValue="my-profile" variant="subtle">
-        <Tabs.List>
+      <Tabs.Root defaultValue="my-profile" variant="outline" colorScheme="teal" mt={6} mb={8}>
+        <Tabs.List gap={4} px={2} py={2} bg="gray.50" borderRadius="xl" boxShadow="sm">
           {finalTabs.map((tab) => (
-            <Tabs.Trigger key={tab.value} value={tab.value}>
+            <Tabs.Trigger key={tab.value} value={tab.value} px={5} py={2} fontWeight="semibold" fontSize="md" _selected={{ bg: "teal.500", color: "white" }} _hover={{ bg: "teal.100" }}>
+              <tab.icon style={{ marginRight: 8, verticalAlign: "middle" }} />
               {tab.title}
             </Tabs.Trigger>
           ))}

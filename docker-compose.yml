@@ -1,6 +1,6 @@
 services:
 
-  db:
+  sm-db:
     image: postgres:17
     restart: always
     healthcheck:
@@ -19,22 +19,22 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
-  adminer:
+  sm-adminer:
     image: adminer
     restart: always
     networks:
       - default
     depends_on:
-      - db
+      - sm-db
     environment:
       - ADMINER_DESIGN=pepa-linha-dark
 
-  prestart:
+  sm-prestart:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     build:
       context: ./backend
     depends_on:
-      db:
+      sm-db:
         condition: service_healthy
         restart: true
     command: bash scripts/prestart.sh
@@ -52,21 +52,21 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
+      - POSTGRES_SERVER=sm-db
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
 
-  backend:
+  sm-backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     restart: always
     depends_on:
-      db:
+      sm-db:
         condition: service_healthy
         restart: true
-      prestart:
+      sm-prestart:
         condition: service_completed_successfully
     env_file:
       - .env
@@ -82,7 +82,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
+      - POSTGRES_SERVER=sm-db
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
@@ -98,7 +98,7 @@ services:
     ports:
       - "8000:8000"
 
-  frontend:
+  sm-frontend:
     image: '${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}'
     restart: always
     build:

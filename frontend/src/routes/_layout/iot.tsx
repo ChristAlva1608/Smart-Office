@@ -4,6 +4,7 @@ import { FiActivity, FiThermometer, FiDroplet, FiSun } from "react-icons/fi"
 
 import useAuth from "@/hooks/useAuth"
 import { useSensorData } from "@/hooks/useSensorData"
+import { usePredictNextMetric } from "@/hooks/useSensorData"
 
 export const Route = createFileRoute("/_layout/iot")({
   component: IoT,
@@ -15,6 +16,8 @@ function IoT() {
   const isChildRoute = matches.some(match => match.routeId.includes('/temperature') || match.routeId.includes('/humidity'))
   const { data: temperatureData, isLoading: isTemperatureLoading } = useSensorData('temperature')
   const { data: humidityData, isLoading: isHumidityLoading } = useSensorData('humidity')
+  const { data: predictedTemperature, isLoading: isPredictedTemperatureLoading, error: predictedTemperatureError } = usePredictNextMetric('temperature')
+  const { data: predictedHumidity, isLoading: isPredictedHumidityLoading, error: predictedHumidityError } = usePredictNextMetric('humidity')
 
   return (
     <Container maxW="full">
@@ -60,6 +63,9 @@ function IoT() {
                   <Text fontSize="2xl" fontWeight="bold">
                     {isTemperatureLoading ? "Loading..." : `${temperatureData?.value}°C`}
                   </Text>
+                  <Text color="gray.600" fontSize="md">
+                    {isPredictedTemperatureLoading ? "Predicting..." : predictedTemperatureError ? "Prediction unavailable" : predictedTemperature ? `Next: ${predictedTemperature.value.toFixed(2)}${predictedTemperature.unit}` : null}
+                  </Text>
                   <Text color="gray.500" fontSize="sm">
                     Last updated: {isTemperatureLoading ? "..." : new Date(temperatureData?.timestamp || "").toLocaleTimeString()}
                   </Text>
@@ -88,6 +94,9 @@ function IoT() {
                   </Flex>
                   <Text fontSize="2xl" fontWeight="bold">
                     {isHumidityLoading ? "Loading..." : `${humidityData?.value}%`}
+                  </Text>
+                  <Text color="gray.600" fontSize="md">
+                    {isPredictedHumidityLoading ? "Predicting..." : predictedHumidityError ? "Prediction unavailable" : predictedHumidity ? `Next: ${predictedHumidity.value.toFixed(2)}${predictedHumidity.unit}` : null}
                   </Text>
                   <Text color="gray.500" fontSize="sm">
                     Last updated: {isHumidityLoading ? "..." : new Date(humidityData?.timestamp || "").toLocaleTimeString()}
