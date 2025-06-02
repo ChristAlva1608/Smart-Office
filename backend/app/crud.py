@@ -4,7 +4,7 @@ from typing import Any
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
+from app.models import Item, ItemCreate, User, UserCreate, UserUpdate, Alarm, AlarmCreate, AlarmUpdate, Notification, NotificationCreate
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -52,3 +52,64 @@ def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -
     session.commit()
     session.refresh(db_item)
     return db_item
+
+
+def create_alarm(*, session: Session, alarm_create: AlarmCreate, user_id: uuid.UUID) -> Alarm:
+    db_obj = Alarm.model_validate(alarm_create, update={"user_id": user_id})
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def get_alarm(session: Session, alarm_id: uuid.UUID) -> Alarm | None:
+    return session.get(Alarm, alarm_id)
+
+
+def get_alarms_by_user(session: Session, user_id: uuid.UUID) -> list[Alarm]:
+    statement = select(Alarm).where(Alarm.user_id == user_id)
+    return session.exec(statement).all()
+
+
+def update_alarm(*, session: Session, db_alarm: Alarm, alarm_in: AlarmUpdate) -> Alarm:
+    alarm_data = alarm_in.model_dump(exclude_unset=True)
+    db_alarm.sqlmodel_update(alarm_data)
+    session.add(db_alarm)
+    session.commit()
+    session.refresh(db_alarm)
+    return db_alarm
+
+
+def delete_alarm(session: Session, db_alarm: Alarm) -> None:
+    session.delete(db_alarm)
+    session.commit()
+
+
+def create_notification(*, session: Session, notification_create: NotificationCreate) -> Notification:
+    db_obj = Notification.model_validate(notification_create)
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
+
+
+def get_notifications_by_user(session: Session, user_id: uuid.UUID) -> list[Notification]:
+    statement = select(Notification).where(Notification.user_id == user_id).order_by(Notification.created_at.desc())
+    return session.exec(statement).all()
+
+
+def mark_notification_read(session: Session, notification_id: uuid.UUID) -> Notification | None:
+    notification = session.get(Notification, notification_id)
+    if notification:
+        notification.is_read = True
+        session.add(notification)
+        session.commit()
+        session.refresh(notification)
+    return notification
+
+
+def delete_notification(session: Session, notification_id: uuid.UUID) -> None:
+    notification = session.get(Notification, notification_id)
+    if notification:
+        session.delete(notification)
+        session.commit()

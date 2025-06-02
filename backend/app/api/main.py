@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import items, login, private, users, utils, api_coreiot
+from app.api.routes import items, login, private, users, utils, api_coreiot, alarms, notifications
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -9,6 +9,8 @@ api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(items.router)
 api_router.include_router(api_coreiot.router)
+api_router.include_router(alarms.router)
+api_router.include_router(notifications.router)
 
 
 if settings.ENVIRONMENT == "local":
