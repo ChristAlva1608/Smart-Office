@@ -108,6 +108,14 @@ def mark_notification_read(session: Session, notification_id: uuid.UUID) -> Noti
     return notification
 
 
+def mark_all_notifications_read(session: Session, user_id: uuid.UUID) -> None:
+    statement = select(Notification).where(Notification.user_id == user_id)
+    notifications = session.exec(statement).all()
+    for notification in notifications:
+        notification.is_read = True
+        session.add(notification)
+    session.commit()
+
 def delete_notification(session: Session, notification_id: uuid.UUID) -> None:
     notification = session.get(Notification, notification_id)
     if notification:

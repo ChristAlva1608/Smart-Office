@@ -22,6 +22,7 @@ import { Route as LayoutItemsImport } from './routes/_layout/items'
 import { Route as LayoutIotImport } from './routes/_layout/iot'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
 import { Route as LayoutIotTemperatureImport } from './routes/_layout/iot/temperature'
+import { Route as LayoutIotLightImport } from './routes/_layout/iot/light'
 import { Route as LayoutIotHumidityImport } from './routes/_layout/iot/humidity'
 
 // Create/Update Routes
@@ -81,6 +82,11 @@ const LayoutIotTemperatureRoute = LayoutIotTemperatureImport.update({
   getParentRoute: () => LayoutIotRoute,
 } as any)
 
+const LayoutIotLightRoute = LayoutIotLightImport.update({
+  path: '/light',
+  getParentRoute: () => LayoutIotRoute,
+} as any)
+
 const LayoutIotHumidityRoute = LayoutIotHumidityImport.update({
   path: '/humidity',
   getParentRoute: () => LayoutIotRoute,
@@ -134,6 +140,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIotHumidityImport
       parentRoute: typeof LayoutIotImport
     }
+    '/_layout/iot/light': {
+      preLoaderRoute: typeof LayoutIotLightImport
+      parentRoute: typeof LayoutIotImport
+    }
     '/_layout/iot/temperature': {
       preLoaderRoute: typeof LayoutIotTemperatureImport
       parentRoute: typeof LayoutIotImport
@@ -148,6 +158,7 @@ export const routeTree = rootRoute.addChildren([
     LayoutAdminRoute,
     LayoutIotRoute.addChildren([
       LayoutIotHumidityRoute,
+      LayoutIotLightRoute,
       LayoutIotTemperatureRoute,
     ]),
     LayoutItemsRoute,

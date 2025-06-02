@@ -45,11 +45,14 @@ const UserInformation = () => {
     },
   })
   const [coreiotToken, setCoreiotToken] = useState(currentUser?.coreiot_access_token || "")
-  const [savingToken, setSavingToken] = useState(false)
-  const [tokenMessage, setTokenMessage] = useState("")
+  const initialCoreiotToken = currentUser?.coreiot_access_token || ""
   const { value: clipboardValue, setValue } = useClipboard({ value: coreiotToken })
   const hasCopied = clipboardValue === coreiotToken
   const handleCopy = () => setValue(coreiotToken)
+
+  // Determine if any field has changed
+  const isTokenDirty = coreiotToken !== initialCoreiotToken
+  const canSave = (isDirty || isTokenDirty) && getValues("email") && getValues("full_name") && coreiotToken
 
   const toggleEditMode = () => {
     setEditMode(!editMode)
@@ -70,25 +73,12 @@ const UserInformation = () => {
   })
 
   const onSubmit: SubmitHandler<UserUpdateMe> = async (data) => {
-    mutation.mutate(data)
+    mutation.mutate({ ...data, coreiot_access_token: coreiotToken })
   }
 
   const onCancel = () => {
     reset()
     toggleEditMode()
-  }
-
-  const handleSaveToken = async () => {
-    setSavingToken(true)
-    setTokenMessage("")
-    try {
-      await UsersService.updateCoreiotTokenMe({ requestBody: { coreiot_access_token: coreiotToken } })
-      setTokenMessage("Token saved!")
-      queryClient.invalidateQueries()
-    } catch (e) {
-      setTokenMessage("Failed to save token.")
-    }
-    setSavingToken(false)
   }
 
   // Avatar fallback: use initials in a circle
@@ -146,12 +136,6 @@ const UserInformation = () => {
                 {hasCopied ? "Copied" : "Copy"}
               </Button>
             </HStack>
-            <Button mt={2} colorScheme="teal" onClick={handleSaveToken} loading={savingToken} w="full" type="button">
-              Save Token
-            </Button>
-            {tokenMessage && (
-              <Text mt={2} color={tokenMessage === "Token saved!" ? "green.500" : "red.500"}>{tokenMessage}</Text>
-            )}
           </Field>
           <Flex mt={6} gap={3} justify="flex-end">
             <Button
@@ -159,7 +143,7 @@ const UserInformation = () => {
               onClick={toggleEditMode}
               type={editMode ? "button" : "submit"}
               loading={editMode ? isSubmitting : false}
-              disabled={editMode ? !isDirty || !getValues("email") : false}
+              disabled={editMode ? !canSave : false}
             >
               {editMode ? "Save" : "Edit"}
             </Button>

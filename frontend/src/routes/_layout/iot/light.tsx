@@ -1,6 +1,6 @@
 import { Box, Text, Flex, Heading, Icon, Button, SimpleGrid } from "@chakra-ui/react"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { FiThermometer, FiArrowLeft } from "react-icons/fi"
+import { FiSun, FiArrowLeft } from "react-icons/fi"
 import { Line } from "react-chartjs-2"
 import {
   Chart as ChartJS,
@@ -14,7 +14,6 @@ import {
 } from 'chart.js'
 import { useSensorData, useDailySensorData } from "@/hooks/useSensorData"
 
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -25,38 +24,35 @@ ChartJS.register(
   Legend
 )
 
-export const Route = createFileRoute("/_layout/iot/temperature")({
-  component: TemperatureDetail,
+export const Route = createFileRoute("/_layout/iot/light")({
+  component: LightDetail,
 })
 
-function TemperatureDetail() {
-  const { data: latestData, isLoading: isLatestLoading } = useSensorData('temperature')
-  const { data: dailyTemperatureData, isLoading: isDailyLoading } = useDailySensorData('temperature')
+function formatTimeLabel(timestamp: string) {
+  // Ensure the timestamp is parsed as UTC
+  const safeTimestamp = timestamp.endsWith('Z') ? timestamp : `${timestamp}Z`;
+  const date = new Date(safeTimestamp);
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+}
 
-  console.log("latestData", latestData)
-  console.log("dailyTemperatureData", dailyTemperatureData)
-  
-  function formatTimeLabel(timestamp: string) {
-    // Ensure the timestamp is parsed as UTC
-    const safeTimestamp = timestamp.endsWith('Z') ? timestamp : `${timestamp}Z`;
-    const date = new Date(safeTimestamp);
-    return date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    });
-  }
+function LightDetail() {
+  const { data: latestData, isLoading: isLatestLoading } = useSensorData('light')
+  const { data: dailyLightData, isLoading: isDailyLoading } = useDailySensorData('light')
 
   const chartData = {
-    labels: dailyTemperatureData?.map(point => formatTimeLabel(point.timestamp)) || [],
+    labels: dailyLightData?.map(point => formatTimeLabel(point.timestamp)) || [],
     datasets: [
       {
-        label: 'Temperature',
-        data: dailyTemperatureData?.map(point => point.value) || [],
-        borderColor: 'rgba(255, 99, 132, 1)',
-        backgroundColor: 'rgba(255, 99, 132, 0.1)',
-        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+        label: 'Light',
+        data: dailyLightData?.map(point => point.value) || [],
+        borderColor: 'rgba(255, 215, 0, 1)',
+        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+        pointBackgroundColor: 'rgba(255, 215, 0, 1)',
         pointRadius: 3,
         pointHoverRadius: 5,
         borderWidth: 2,
@@ -79,12 +75,12 @@ function TemperatureDetail() {
       },
       title: {
         display: true,
-        text: 'Temperature Over Last 24 Hours',
+        text: 'Light Level Over Last 24 Hours',
         font: { size: 22, weight: 700 }
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => ` ${context.parsed.y.toLocaleString()}°C at ${context.label}`,
+          label: (context: any) => ` ${context.parsed.y.toLocaleString()} lux at ${context.label}`,
         }
       }
     },
@@ -96,7 +92,7 @@ function TemperatureDetail() {
         beginAtZero: false,
         title: {
           display: true,
-          text: 'Temperature (°C)',
+          text: 'Light (lux)',
           color: '#333',
           font: { size: 16 }
         },
@@ -132,13 +128,13 @@ function TemperatureDetail() {
   }
 
   if (isLatestLoading || isDailyLoading) {
-    return <div>Loading temperature data...</div>
+    return <div>Loading light data...</div>
   }
 
   // Calculate min and max from daily data
-  const values = dailyTemperatureData?.map(point => point.value) || []
-  const maxTemperature = values.length > 0 ? Math.max(...values) : 0
-  const minTemperature = values.length > 0 ? Math.min(...values) : 0
+  const values = dailyLightData?.map(point => point.value) || []
+  const maxLight = values.length > 0 ? Math.max(...values) : 0
+  const minLight = values.length > 0 ? Math.min(...values) : 0
 
   return (
     <Box>
@@ -159,8 +155,8 @@ function TemperatureDetail() {
           </Button>
         </Link>
         <Flex align="center" gap={2}>
-          <Icon as={FiThermometer} boxSize={7} color="red.500" />
-          <Heading size="md">Temperature Details</Heading>
+          <Icon as={FiSun} boxSize={7} color="yellow.500" />
+          <Heading size="md">Light Level Details</Heading>
         </Flex>
       </Flex>
 
@@ -178,9 +174,9 @@ function TemperatureDetail() {
             display="flex"
             flexDir="column"
             justifyContent="center"
-            aria-label="Temperature line chart"
+            aria-label="Light level line chart"
           >
-            {dailyTemperatureData?.length === 0 ? (
+            {dailyLightData?.length === 0 ? (
               <Flex align="center" justify="center" height="100%">
                 <Text color="gray.400">No data available for the last 24 hours.</Text>
               </Flex>
@@ -191,12 +187,12 @@ function TemperatureDetail() {
 
           {/* Statistics */}
           <Box bg="white" borderRadius="lg" shadow="sm" p={6} display="flex" flexDir="column" justifyContent="center">
-            <Heading size="md" mb={4}>Temperature Statistics</Heading>
+            <Heading size="md" mb={4}>Light Level Statistics</Heading>
             <SimpleGrid columns={2} gap={4}>
               <Box>
-                <Text color="gray.500" fontSize="sm">Current Temperature</Text>
-                <Text fontSize="3xl" fontWeight="bold" color="red.500">
-                  {latestData ? `${Number(latestData.value).toFixed(2)}°C` : "No data"}
+                <Text color="gray.500" fontSize="sm">Current Light Level</Text>
+                <Text fontSize="3xl" fontWeight="bold" color="yellow.500">
+                  {latestData ? `${Number(latestData.value).toFixed(2)} lux` : "No data"}
                 </Text>
               </Box>
               <Box>
@@ -211,12 +207,12 @@ function TemperatureDetail() {
                 </Text>
               </Box>
               <Box>
-                <Text color="gray.500" fontSize="sm">Highest Temperature</Text>
-                <Text fontSize="2xl" fontWeight="bold">{maxTemperature !== 0 ? maxTemperature.toFixed(2) : 0}°C</Text>
+                <Text color="gray.500" fontSize="sm">Highest Light Level</Text>
+                <Text fontSize="2xl" fontWeight="bold">{maxLight !== 0 ? maxLight.toFixed(2) : 0} lux</Text>
               </Box>
               <Box>
-                <Text color="gray.500" fontSize="sm">Lowest Temperature</Text>
-                <Text fontSize="2xl" fontWeight="bold">{minTemperature !== 0 ? minTemperature.toFixed(2) : 0}°C</Text>
+                <Text color="gray.500" fontSize="sm">Lowest Light Level</Text>
+                <Text fontSize="2xl" fontWeight="bold">{minLight !== 0 ? minLight.toFixed(2) : 0} lux</Text>
               </Box>
             </SimpleGrid>
           </Box>
@@ -224,6 +220,6 @@ function TemperatureDetail() {
       </Box>
     </Box>
   )
-} 
+}
 
-export default TemperatureDetail
+export default LightDetail

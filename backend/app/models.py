@@ -124,11 +124,12 @@ class CoreIoTData(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     temperature: float
     humidity: float
+    light: float
     timestamp: datetime = Field(default_factory=lambda: datetime.now)
 
 
 class AlarmBase(SQLModel):
-    type: str = Field(description="Type of alarm: 'temperature' or 'humidity'")
+    type: str = Field(description="Type of alarm: 'temperature' or 'humidity' or 'light'")
     threshold_type: str = Field(description="'above' or 'below'")
     value: float = Field(description="Threshold value")
     is_active: bool = Field(default=True)

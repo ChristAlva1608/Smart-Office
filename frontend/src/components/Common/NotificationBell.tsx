@@ -11,15 +11,21 @@ import {
 import { FiBell, FiCheckCircle, FiInbox } from "react-icons/fi";
 import { useNotifications } from "../../hooks/useNotifications";
 
-function timeAgo(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return date.toLocaleDateString();
-}
+// function timeAgo(date: Date) {
+//   const now = new Date();
+//   const dateObj = typeof date === "string" ? new Date(date) : date;
+//   const diff = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+//   if (diff < 60) return `${diff}s ago`;
+//   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+//   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+//   // For notifications older than a day, show time in HH:mm (24-hour) format, local timezone
+//   return dateObj.toLocaleTimeString([], {
+//     hour: '2-digit',
+//     minute: '2-digit',
+//     hour12: false,
+//     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+//   });
+// }
 
 export default function NotificationBell() {
   const { data: notifications = [], isLoading, refetch } = useNotifications();
@@ -38,14 +44,19 @@ export default function NotificationBell() {
     prevUnread.current = unread.length;
   }, [unread.length]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 1500); // 1.5 seconds
+    return () => clearInterval(interval);
+  }, [refetch]);
+
   async function markAllRead() {
-    for (const n of unread) {
-      await fetch(`/api/v1/notifications/${n.id}/read`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
-      });
-    }
+    await fetch(`http://localhost:8000/api/v1/notifications/read-all`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
+    });
     refetch();
   }
 
@@ -88,10 +99,10 @@ export default function NotificationBell() {
         >
           <Box flex="1">
             <Text fontSize="sm" fontWeight={n.is_read ? "normal" : "semibold"}>{n.message}</Text>
-            <Text fontSize="xs" color="gray.400" mt={1}>{timeAgo(n.created_at)}</Text>
+            {/* <Text fontSize="xs" color="gray.400" mt={1}>{timeAgo(n.created_at)}</Text> */}
           </Box>
           {!n.is_read && (
-            <IconButton aria-label="Mark as read" size="sm" colorScheme="green" variant="ghost" onClick={async () => { await fetch(`/api/v1/notifications/${n.id}/read`, { method: "POST", credentials: "include", headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` }, }); refetch(); }}>
+            <IconButton aria-label="Mark as read" size="sm" colorScheme="green" variant="ghost" onClick={async () => { await fetch(`http://localhost:8000/api/v1/notifications/${n.id}/read`, { method: "POST", credentials: "include", headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` }, }); refetch(); }}>
               <FiCheckCircle />
             </IconButton>
           )}
@@ -196,13 +207,13 @@ export default function NotificationBell() {
             >
               Unread
             </button>
-            <button
+            {/* <button
               onClick={() => setTab("action")}
               style={tabBtn(tab === "action", "#b7791f", "#fbd38d")}
               aria-selected={tab === "action"}
             >
               Requires Action
-            </button>
+            </button> */}
           </Box>
           <Box px={2} py={2} maxH="320px" overflowY="auto">
             {renderTabContent()}

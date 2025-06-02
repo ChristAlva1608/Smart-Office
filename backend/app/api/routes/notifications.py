@@ -20,6 +20,11 @@ def mark_read(notification_id: uuid.UUID, session: SessionDep, current_user: Cur
         raise HTTPException(status_code=404, detail="Notification not found")
     return notification
 
+@router.post("/read-all")
+def mark_all_read(session: SessionDep, current_user: CurrentUser):
+    crud.mark_all_notifications_read(session, current_user.id)
+    return {"message": "All notifications marked as read"}
+
 @router.delete("/{notification_id}")
 def delete_notification(notification_id: uuid.UUID, session: SessionDep, current_user: CurrentUser):
     notification = crud.get_notifications_by_user(session, user_id=current_user.id)

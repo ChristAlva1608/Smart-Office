@@ -8,7 +8,7 @@ export interface Notification {
   is_read: boolean
   alarm_id?: string | null
   user_id: string
-  created_at: string
+  created_at: Date
 }
 
 export function useNotifications() {

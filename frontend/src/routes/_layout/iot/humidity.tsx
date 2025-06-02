@@ -29,45 +29,100 @@ export const Route = createFileRoute("/_layout/iot/humidity")({
   component: HumidityDetail,
 })
 
+function formatTimeLabel(timestamp: string) {
+  // Ensure the timestamp is parsed as UTC
+  const safeTimestamp = timestamp.endsWith('Z') ? timestamp : `${timestamp}Z`;
+  const date = new Date(safeTimestamp);
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+}
+
 function HumidityDetail() {
   const { data: latestData, isLoading: isLatestLoading } = useSensorData('humidity')
   const { data: dailyHumidityData, isLoading: isDailyLoading } = useDailySensorData('humidity')
 
   const chartData = {
-    labels: dailyHumidityData?.map(point => point.timestamp) || [],
+    labels: dailyHumidityData?.map(point => formatTimeLabel(point.timestamp)) || [],
     datasets: [
       {
         label: 'Humidity',
         data: dailyHumidityData?.map(point => point.value) || [],
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+        tension: 0.4,
+        fill: true,
       }
     ]
   }
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: 'bottom' as const,
+        labels: {
+          color: '#333',
+          font: { size: 14, weight: 600 }
+        }
       },
       title: {
         display: true,
         text: 'Humidity Over Last 24 Hours',
+        font: { size: 22, weight: 700 }
       },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => ` ${context.parsed.y.toLocaleString()}% at ${context.label}`,
+        }
+      }
+    },
+    layout: {
+      padding: 24
     },
     scales: {
       y: {
         beginAtZero: false,
         title: {
           display: true,
-          text: 'Humidity (%)'
+          text: 'Humidity (%)',
+          color: '#333',
+          font: { size: 16 }
+        },
+        ticks: {
+          color: '#333',
+          font: { size: 14 },
+          callback: (tickValue: string | number) => Number(tickValue).toLocaleString()
+        },
+        grid: {
+          color: '#eee'
         }
       },
       x: {
         title: {
           display: true,
-          text: 'Hours'
+          text: 'Time',
+          color: '#333',
+          font: { size: 16 }
+        },
+        ticks: {
+          color: '#333',
+          font: { size: 14 },
+          maxTicksLimit: 8,
+          autoSkip: true,
+          maxRotation: 0,
+          minRotation: 0,
+        },
+        grid: {
+          color: '#eee'
         }
       }
     }
@@ -110,8 +165,25 @@ function HumidityDetail() {
       <Box p={{ base: 2, md: 6 }}>
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
           {/* Chart */}
-          <Box bg="white" borderRadius="lg" shadow="sm" p={4} minH="400px" display="flex" flexDir="column" justifyContent="center">
-            <Line data={chartData} options={options} />
+          <Box
+            bg="gray.50"
+            borderRadius="xl"
+            shadow="md"
+            p={{ base: 4, md: 8 }}
+            minH="400px"
+            height="400px"
+            display="flex"
+            flexDir="column"
+            justifyContent="center"
+            aria-label="Humidity line chart"
+          >
+            {dailyHumidityData?.length === 0 ? (
+              <Flex align="center" justify="center" height="100%">
+                <Text color="gray.400">No data available for the last 24 hours.</Text>
+              </Flex>
+            ) : (
+              <Line data={chartData} options={options} style={{ height: '100%' }} />
+            )}
           </Box>
 
           {/* Statistics */}
@@ -121,22 +193,27 @@ function HumidityDetail() {
               <Box>
                 <Text color="gray.500" fontSize="sm">Current Humidity</Text>
                 <Text fontSize="3xl" fontWeight="bold" color="blue.500">
-                  {latestData ? `${latestData.value}%` : "No data"}
+                  {latestData ? `${Number(latestData.value).toFixed(2)}%` : "No data"}
                 </Text>
               </Box>
               <Box>
                 <Text color="gray.500" fontSize="sm">Last Updated</Text>
                 <Text fontSize="xl" fontWeight="semibold">
-                  {latestData ? new Date(latestData.timestamp).toLocaleTimeString() : "No data"}
+                  {latestData ? new Date(latestData.timestamp).toLocaleTimeString("en-US", {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                  }) : "No data"}
                 </Text>
               </Box>
               <Box>
                 <Text color="gray.500" fontSize="sm">Highest Humidity</Text>
-                <Text fontSize="2xl" fontWeight="bold">{maxHumidity}%</Text>
+                <Text fontSize="2xl" fontWeight="bold">{maxHumidity !== 0 ? maxHumidity.toFixed(2) : 0}%</Text>
               </Box>
               <Box>
                 <Text color="gray.500" fontSize="sm">Lowest Humidity</Text>
-                <Text fontSize="2xl" fontWeight="bold">{minHumidity}%</Text>
+                <Text fontSize="2xl" fontWeight="bold">{minHumidity !== 0 ? minHumidity.toFixed(2) : 0}%</Text>
               </Box>
             </SimpleGrid>
           </Box>

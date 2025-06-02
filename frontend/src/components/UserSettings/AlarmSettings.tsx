@@ -8,17 +8,15 @@ import {
   Stack,
   Spinner,
   Input,
+  Table,
+  Badge,
 } from "@chakra-ui/react"
-import { FiEdit, FiTrash2, FiPlus, FiCheckCircle } from "react-icons/fi"
+import { FiEdit, FiTrash2, FiPlus } from "react-icons/fi"
 import { useAlarms } from "@/hooks/useAlarms"
-import { useNotifications } from "@/hooks/useNotifications"
-
-const API_BASE = "/api/v1/alarms"
-const NOTIF_API = "/api/v1/notifications"
+import { useColorModeValue } from '@/components/ui/color-mode'
 
 export default function AlarmSettings() {
   const { data: alarms = [], isLoading, error, refetch } = useAlarms()
-  const { data: notifications = [], isLoading: notifLoading, refetch: refetchNotif } = useNotifications()
   const [editing, setEditing] = useState<any | null>(null)
   const [form, setForm] = useState({
     type: "temperature",
@@ -26,16 +24,6 @@ export default function AlarmSettings() {
     value: "",
     is_active: true,
   })
-
-  async function markNotificationRead(id: string) {
-    const token = localStorage.getItem("access_token")
-    await fetch(`${NOTIF_API}/${id}/read`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-    refetchNotif()
-  }
 
   function handleChange(e: any) {
     const { name, value, type: inputType, checked } = e.target
@@ -59,14 +47,25 @@ export default function AlarmSettings() {
 
   async function handleSubmit(e: any) {
     e.preventDefault()
-    const method = editing ? "PATCH" : "POST"
-    const url = editing ? `${API_BASE}/${editing.id}` : API_BASE
     const token = localStorage.getItem("access_token")
+    let url = "http://localhost:8000/api/v1/alarms"
+    let method = "POST"
+    let body: any = { ...form, value: parseFloat(form.value) }
+    if (editing) {
+      url = `http://localhost:8000/api/v1/alarms/${editing.id}`
+      method = "PATCH"
+      // Only send fields allowed by AlarmUpdate (likely partial update)
+      body = {}
+      if (form.type !== undefined) body.type = form.type
+      if (form.threshold_type !== undefined) body.threshold_type = form.threshold_type
+      if (form.value !== undefined) body.value = parseFloat(form.value)
+      if (form.is_active !== undefined) body.is_active = form.is_active
+    }
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       credentials: "include",
-      body: JSON.stringify({ ...form, value: parseFloat(form.value) }),
+      body: JSON.stringify(body),
     })
     if (res.ok) {
       window.alert(`Alarm ${editing ? "updated" : "created"}!`)
@@ -80,7 +79,7 @@ export default function AlarmSettings() {
   async function handleDelete(id: string) {
     if (!window.confirm("Delete this alarm?")) return
     const token = localStorage.getItem("access_token")
-    const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE", credentials: "include", headers: { Authorization: `Bearer ${token}` } })
+    const res = await fetch(`http://localhost:8000/api/v1/alarms/${id}`, { method: "DELETE", credentials: "include", headers: { Authorization: `Bearer ${token}` } })
     if (res.ok) {
       window.alert("Alarm deleted")
       refetch()
@@ -90,22 +89,6 @@ export default function AlarmSettings() {
   return (
     <Box>
       <Heading size="md" mb={4}>Notification Alarms</Heading>
-      {/* Notifications Section */}
-      <Box mb={6} p={4} bg="gray.50" borderRadius="md" boxShadow="sm">
-        <Heading size="sm" mb={2}>Notifications</Heading>
-        {notifLoading ? (
-          <Spinner size="sm" />
-        ) : notifications.length === 0 ? (
-          <Box color="gray.500">No notifications</Box>
-        ) : (
-          notifications.filter(n => !n.is_read).map((n) => (
-            <Flex key={n.id} align="center" mb={2} bg="yellow.50" p={2} borderRadius="md">
-              <Box flex="1">{n.message}</Box>
-              <IconButton aria-label="Mark as read" size="sm" colorScheme="green" onClick={() => markNotificationRead(n.id)}><FiCheckCircle /></IconButton>
-            </Flex>
-          ))
-        )}
-      </Box>
       <form onSubmit={handleSubmit}>
         <Stack direction={{ base: "column", md: "row" }} gap={4} mb={4} alignItems="end">
           <Box w="150px">
@@ -113,6 +96,7 @@ export default function AlarmSettings() {
             <select name="type" value={form.type} onChange={handleChange} style={{ width: "100%", padding: 6, borderRadius: 6, border: "1px solid #ccc" }}>
               <option value="temperature">Temperature</option>
               <option value="humidity">Humidity</option>
+              <option value="light">Light</option>
             </select>
           </Box>
           <Box w="150px">
@@ -139,31 +123,45 @@ export default function AlarmSettings() {
       ) : error ? (
         <Box color="red.500">Error loading alarms</Box>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", padding: 8 }}>Type</th>
-              <th style={{ textAlign: "left", padding: 8 }}>Threshold</th>
-              <th style={{ textAlign: "left", padding: 8 }}>Value</th>
-              <th style={{ textAlign: "left", padding: 8 }}>Active</th>
-              <th style={{ textAlign: "left", padding: 8 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {alarms.map((alarm) => (
-              <tr key={alarm.id}>
-                <td style={{ padding: 8 }}>{alarm.type}</td>
-                <td style={{ padding: 8 }}>{alarm.threshold_type}</td>
-                <td style={{ padding: 8 }}>{alarm.value}</td>
-                <td style={{ padding: 8 }}>{alarm.is_active ? "Yes" : "No"}</td>
-                <td style={{ padding: 8 }}>
-                  <IconButton aria-label="Edit" size="sm" mr={2} onClick={() => startEdit(alarm)}><FiEdit /></IconButton>
-                  <IconButton aria-label="Delete" size="sm" colorScheme="red" onClick={() => handleDelete(alarm.id)}><FiTrash2 /></IconButton>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Box mt={6} borderRadius="lg" overflow="hidden" boxShadow="md" bg={useColorModeValue('white', 'gray.800')}>
+          <Table.Root size={{ base: "sm", md: "md" }}>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader fontWeight="bold">Type</Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">Threshold</Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">Value</Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">Active</Table.ColumnHeader>
+                <Table.ColumnHeader fontWeight="bold">Actions</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {alarms.map((alarm) => (
+                <Table.Row key={alarm.id}>
+                  <Table.Cell>{alarm.type.charAt(0).toUpperCase() + alarm.type.slice(1)}</Table.Cell>
+                  <Table.Cell textTransform="capitalize">{alarm.threshold_type}</Table.Cell>
+                  <Table.Cell>{alarm.value}</Table.Cell>
+                  <Table.Cell>
+                    {alarm.is_active ? (
+                      <Badge colorScheme="green">Active</Badge>
+                    ) : (
+                      <Badge colorScheme="red">Inactive</Badge>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Flex gap={2}>
+                    <IconButton aria-label="Edit" size="sm" colorScheme="teal" variant="ghost" onClick={() => startEdit(alarm)}>
+                      <FiEdit />
+                    </IconButton>
+                    <IconButton aria-label="Delete" size="sm" colorScheme="red" variant="ghost" onClick={() => handleDelete(alarm.id)}>
+                      <FiTrash2 />
+                    </IconButton>
+                    </Flex>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+        </Box>
       )}
     </Box>
   )

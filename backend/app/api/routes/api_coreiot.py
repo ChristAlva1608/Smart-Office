@@ -1,3 +1,4 @@
+import copy
 from typing import Any, List
 import logging
 from datetime import datetime, timedelta, timezone
@@ -16,7 +17,10 @@ from app import crud
 
 # Directory to save models
 MODEL_DIR = "models"
+ENTITY_TYPE = 'DEVICE'
+ENTITY_ID = '3c4f5c80-f790-11ef-a887-6d1a184f2bb5'
 os.makedirs(MODEL_DIR, exist_ok=True)
+
 
 router = APIRouter(prefix="/coreiot", tags=["coreiot"])
 logger = logging.getLogger(__name__)
@@ -55,12 +59,10 @@ def get_coreiot_data(
         'X-Authorization': f'Bearer {current_user.coreiot_access_token}'
     }
     try:
-        entityType = 'DEVICE'
-        entityId = '3c4f5c80-f790-11ef-a887-6d1a184f2bb5'
-        api = f'/api/plugins/telemetry/{entityType}/{entityId}/values/timeseries?keys=humidity%2Ctemperature&useStrictDataTypes=false'
+        api = f'/api/plugins/telemetry/{ENTITY_TYPE}/{ENTITY_ID}/values/timeseries?keys=humidity%2Ctemperature%2Clight&useStrictDataTypes=false'
         url = f'https://app.coreiot.io{api}'
         
-        logger.info(f"Fetching data from CoreIoT: {url}")
+        logger.info(f"Fetching data from CoreIoT: {url}")   
         response = requests.get(url, headers=headers)
         
         if response.status_code == 200:
@@ -85,8 +87,11 @@ def get_coreiot_data(
             latest_data = CoreIoTData(
                 temperature=float(data['temperature'][-1]['value']),
                 humidity=float(data['humidity'][-1]['value']),
+                light=float(data['light'][-1]['value']),
                 timestamp=datetime.fromtimestamp(data['temperature'][-1]['ts'] / 1000, tz=timezone.utc)  # UTC-aware datetime
             )
+
+            save_data = copy.deepcopy(latest_data)
 
             session.add(latest_data)
             session.commit()
@@ -102,6 +107,8 @@ def get_coreiot_data(
                     value = latest_data.temperature
                 elif alarm.type == "humidity":
                     value = latest_data.humidity
+                elif alarm.type == "light":
+                    value = latest_data.light
                 else:
                     continue
                 if alarm.threshold_type == "above" and value > alarm.value:
@@ -110,6 +117,8 @@ def get_coreiot_data(
                 elif alarm.threshold_type == "below" and value < alarm.value:
                     msg = f"{alarm.type.title()} is below {alarm.value} (actual: {value})"
                     notifications.append((msg, alarm.id))
+
+            # send notification to user
             if notifications:
                 for note, alarm_id in notifications:
                     logger.warning(f"[ALARM NOTIFICATION] User {current_user.id}: {note}")
@@ -131,20 +140,22 @@ def get_coreiot_data(
                 last_trained_at = last_trained_at.replace(tzinfo=timezone.utc)
 
             if not last_trained_at or (now - last_trained_at) >= timedelta(minutes=1):
-                # Schedule background training for both metrics
+                # Schedule background training for all metrics
                 def background_train():
                     # Use a new session in the background task
                     with session.bind.connect() as conn:
                         with SessionDep.__origin__(conn) as bg_session:
                             train_user_model(user.id, bg_session, "temperature")
                             train_user_model(user.id, bg_session, "humidity")
+                            train_user_model(user.id, bg_session, "light")
                             user.last_trained_at = now
                             bg_session.add(user)
                             bg_session.commit()
                 
                 logger.info(f"Scheduling background training for user {user.id}")
                 background_tasks.add_task(background_train)
-            return latest_data
+            
+            return save_data
         else:
             logger.error(f"CoreIoT API error: {response.status_code} - {response.text}")
             raise HTTPException(
@@ -170,13 +181,15 @@ def get_daily_data(
     session: SessionDep
 ):
     """
-    Get daily data for a specific type (temperature or humidity)
+    Get daily data for a specific type (temperature, humidity, or light)
     """
-    if type not in ["temperature", "humidity"]:
-        raise HTTPException(status_code=400, detail="Type must be either 'temperature' or 'humidity'")
+    if type not in ["temperature", "humidity", "light"]:
+        raise HTTPException(status_code=400, detail="Type must be either 'temperature', 'humidity', or 'light'")
     
     statement = select(CoreIoTData).where(
-        CoreIoTData.timestamp >= datetime.now() - timedelta(days=1)
+        CoreIoTData.timestamp >= datetime.now(timezone.utc) - timedelta(days=1)
+    ).where(
+        CoreIoTData.timestamp <= datetime.now(timezone.utc)
     ).order_by(CoreIoTData.timestamp.asc())  # Order by timestamp ascending for proper chart display
     
     result = session.exec(statement)
@@ -195,38 +208,25 @@ def control_fan(
     """
     Control the fan
     """
-    try:
-        deviceId = '7af4ea90-e89f-11ef-87b5-21bccf7d29d5'
-        rpc_api = f'https://app.coreiot.io/api/rpc/oneway/{deviceId}'
-        
-        logger.info(f"Sending fan control command: {'on' if turn_on else 'off'}")
-        response = requests.post(
-            rpc_api, 
-            headers=headers, 
-            json={"method": "setFanState", "params": turn_on}
-        )
-        
-        if response.status_code == 200:
-            logger.info(f"Fan control command sent successfully: {response.json()}")
-            return {"status": "success", "message": f"Fan turned {'on' if turn_on else 'off'}"}
-        else:
-            logger.error(f"Failed to control fan: {response.status_code} - {response.text}")
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=f"Failed to control fan: {response.text}"
-            )
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Network error controlling fan: {str(e)}")
-        raise HTTPException(
-            status_code=503,
-            detail=f"Error connecting to CoreIoT: {str(e)}"
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error controlling fan: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error: {str(e)}"
-        )
+    # try:
+    rpc_api = f'https://app.coreiot.io/api/rpc/oneway/{ENTITY_ID}'
+
+    headers = {
+        'X-Authorization': f'Bearer {current_user.coreiot_access_token}',
+        'Content-Type': 'application/json'
+    }
+    
+    logger.info(f"Sending fan control command: {'on' if turn_on else 'off'}")
+    response = requests.post(
+        rpc_api, 
+        headers=headers, 
+        json={"method": "setFanState", "params": turn_on}
+    )
+
+    if response.status_code == 200:
+        return {"status": "success", "message": f"Fan turned {'on' if turn_on else 'off'}"}
+    else:
+        return {"status": "error", "message": f"Failed to control fan: {response.status_code} - {response.text}"}
 
 @router.get("/predict-next")
 def predict_next_metric(
@@ -235,10 +235,10 @@ def predict_next_metric(
     current_user: CurrentUser
 ):
     """
-    Predict the next value for a metric (temperature or humidity) for the current user.
+    Predict the next value for a metric (temperature, humidity, or light) for the current user.
     """
-    if type not in ["temperature", "humidity"]:
-        raise HTTPException(status_code=400, detail="Type must be either 'temperature' or 'humidity'")
+    if type not in ["temperature", "humidity", "light"]:
+        raise HTTPException(status_code=400, detail="Type must be either 'temperature', 'humidity', or 'light'")
     # Load the model
     model_path = os.path.join(MODEL_DIR, f"user_{current_user.id}_{type}.joblib")
     if not os.path.exists(model_path):
