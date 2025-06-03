@@ -14,11 +14,12 @@ from sklearn.linear_model import LinearRegression
 import joblib
 import os
 from app import crud
+from pydantic import BaseModel
 
 # Directory to save models
 MODEL_DIR = "models"
 ENTITY_TYPE = 'DEVICE'
-ENTITY_ID = '3c4f5c80-f790-11ef-a887-6d1a184f2bb5'
+ENTITY_ID = '6c1945c0-0555-11f0-a887-6d1a184f2bb5'
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 
@@ -195,38 +196,45 @@ def get_daily_data(
     result = session.exec(statement)
     return result.all()
 
-# pseudo code for alarm and turn on/off the fan
-# if temp > thres, show alarm on screen and find ways to send request to activate rpc function
-# if temp < thres, turn off the fan and hide the alarm
+class FanControlRequest(BaseModel):
+    turn_on: bool
 
 @router.post("/control-fan")
 def control_fan(
     session: SessionDep,
     current_user: CurrentUser,
-    turn_on: bool
+    req: FanControlRequest
 ):
     """
     Control the fan
     """
-    # try:
-    rpc_api = f'https://app.coreiot.io/api/rpc/oneway/{ENTITY_ID}'
+    try:
+        turn_on = req.turn_on
+        rpc_api = f'https://app.coreiot.io/api/rpc/oneway/{ENTITY_ID}'
 
-    headers = {
-        'X-Authorization': f'Bearer {current_user.coreiot_access_token}',
-        'Content-Type': 'application/json'
-    }
-    
-    logger.info(f"Sending fan control command: {'on' if turn_on else 'off'}")
-    response = requests.post(
-        rpc_api, 
-        headers=headers, 
-        json={"method": "setFanState", "params": turn_on}
-    )
+        headers = {
+            'X-Authorization': f'Bearer {current_user.coreiot_access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        logger.info(f"Sending fan control command: {'on' if turn_on else 'off'}")
+        response = requests.post(
+            rpc_api, 
+            headers=headers, 
+            timeout=1,
+            json={"method": "setFanState", "params": turn_on}
+        )
 
-    if response.status_code == 200:
-        return {"status": "success", "message": f"Fan turned {'on' if turn_on else 'off'}"}
-    else:
-        return {"status": "error", "message": f"Failed to control fan: {response.status_code} - {response.text}"}
+        if response.status_code == 200:
+            return {"status": "success", "message": f"Fan turned {'on' if turn_on else 'off'}"}
+        else:
+            return {"status": "error", "message": f"Failed to control fan: {response.status_code} - {response.text}"}
+    except Exception as e:
+        logger.error(f"Unexpected error controlling fan: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 @router.get("/predict-next")
 def predict_next_metric(

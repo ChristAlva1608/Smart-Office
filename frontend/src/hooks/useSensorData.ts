@@ -121,6 +121,7 @@ export function useControlFan() {
       if (!token) {
         throw new Error('Not authenticated')
       }
+      try {
       const response = await axios.post(
         'http://localhost:8000/api/v1/coreiot/control-fan',
         { turn_on: turnOn },
@@ -132,6 +133,10 @@ export function useControlFan() {
         }
       )
       return response.data
+      } catch (error) {
+        window.alert('Failed to control fan')
+        throw new Error('Failed to control fan')
+      }
     },
   })
 } 
